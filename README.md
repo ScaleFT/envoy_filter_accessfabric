@@ -1,6 +1,10 @@
 # sft_envoy_filter
 HTTP envoy filter that verifies JWTs from the ScaleFT access fabric.
 
+Inspiration taken from:
+* https://github.com/ibmibmibm/libjose (MIT)
+* https://github.com/istio/proxy (Apache 2.0)
+
 ## Building
 
 To build the Envoy static binary:
