@@ -22,7 +22,6 @@ A trivial upstream server and test config are located in `test-server`.
 
 ## TODO
 
-1. **IMPORTANT** Claim validation
-2. Tests
-3. RSA, more generic JWT support
-4. Move to AsyncClient directly for JWKS fetching.
+1. Tests
+2. RSA, more generic JWT support
+3. Move to AsyncClient directly for JWKS fetching.
