@@ -10,11 +10,11 @@
 namespace Envoy {
 namespace Http {
 
-class HttpSampleDecoderFilter : public StreamDecoderFilter,
-                                public Logger::Loggable<Logger::Id::http> {
+class SftJwtDecoderFilter : public StreamDecoderFilter,
+                            public Logger::Loggable<Logger::Id::http> {
  public:
-  HttpSampleDecoderFilter(Http::Sft::SFTConfigSharedPtr config);
-  ~HttpSampleDecoderFilter();
+  SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config);
+  ~SftJwtDecoderFilter();
 
   // Http::StreamFilterBase
   void onDestroy() override;

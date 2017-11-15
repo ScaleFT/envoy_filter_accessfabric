@@ -8,10 +8,7 @@ namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-/**
- * Config registration for http dynamodb filter.
- */
-class HttpSampleDecoderFilterConfig : public NamedHttpFilterConfigFactory {
+class SftJwtDecoderFilterConfig : public NamedHttpFilterConfigFactory {
  public:
   HttpFilterFactoryCb createFilterFactory(const Json::Object &,
                                           const std::string &stat_prefix,

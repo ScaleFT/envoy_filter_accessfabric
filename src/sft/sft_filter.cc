@@ -9,23 +9,22 @@
 namespace Envoy {
 namespace Http {
 
-HttpSampleDecoderFilter::HttpSampleDecoderFilter(
-    Http::Sft::SFTConfigSharedPtr config) {
+SftJwtDecoderFilter::SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config) {
   config_ = config;
 }
 
-HttpSampleDecoderFilter::~HttpSampleDecoderFilter() {}
+SftJwtDecoderFilter::~SftJwtDecoderFilter() {}
 
-void HttpSampleDecoderFilter::onDestroy() {}
+void SftJwtDecoderFilter::onDestroy() {}
 
-void HttpSampleDecoderFilter::sendUnauthorized(std::string status) {
+void SftJwtDecoderFilter::sendUnauthorized(std::string status) {
   Code code = Code(401);
   Utility::sendLocalReply(*decoder_callbacks_, false, code, status);
   return;
 }
 
-FilterHeadersStatus HttpSampleDecoderFilter::decodeHeaders(HeaderMap &headers,
-                                                           bool) {
+FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
+                                                       bool) {
   const HeaderEntry *entry = headers.get(config_->headerKey);
   if (!entry) {
     sendUnauthorized("jwt missing header");
@@ -128,15 +127,15 @@ FilterHeadersStatus HttpSampleDecoderFilter::decodeHeaders(HeaderMap &headers,
   return FilterHeadersStatus::Continue;
 }
 
-FilterDataStatus HttpSampleDecoderFilter::decodeData(Buffer::Instance &, bool) {
+FilterDataStatus SftJwtDecoderFilter::decodeData(Buffer::Instance &, bool) {
   return FilterDataStatus::Continue;
 }
 
-FilterTrailersStatus HttpSampleDecoderFilter::decodeTrailers(HeaderMap &) {
+FilterTrailersStatus SftJwtDecoderFilter::decodeTrailers(HeaderMap &) {
   return FilterTrailersStatus::Continue;
 }
 
-void HttpSampleDecoderFilter::setDecoderFilterCallbacks(
+void SftJwtDecoderFilter::setDecoderFilterCallbacks(
     StreamDecoderFilterCallbacks &callbacks) {
   decoder_callbacks_ = &callbacks;
 }

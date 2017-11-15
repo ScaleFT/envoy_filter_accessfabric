@@ -10,7 +10,7 @@ namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-HttpFilterFactoryCb HttpSampleDecoderFilterConfig::createFilterFactory(
+HttpFilterFactoryCb SftJwtDecoderFilterConfig::createFilterFactory(
     const Json::Object &json_config, const std::string &,
     FactoryContext &context) {
   Http::Sft::SFTConfigSharedPtr config(new Http::Sft::SFTConfig(
@@ -19,14 +19,11 @@ HttpFilterFactoryCb HttpSampleDecoderFilterConfig::createFilterFactory(
 
   return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
     callbacks.addStreamDecoderFilter(Http::StreamDecoderFilterSharedPtr{
-        new Http::HttpSampleDecoderFilter(config)});
+        new Http::SftJwtDecoderFilter(config)});
   };
 };
 
-/**
- * Static registration for the http dynamodb filter. @see RegisterFactory.
- */
-static Registry::RegisterFactory<HttpSampleDecoderFilterConfig,
+static Registry::RegisterFactory<SftJwtDecoderFilterConfig,
                                  NamedHttpFilterConfigFactory>
     register_;
 
