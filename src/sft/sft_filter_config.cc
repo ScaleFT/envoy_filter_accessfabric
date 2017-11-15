@@ -13,7 +13,6 @@ namespace Configuration {
 HttpFilterFactoryCb HttpSampleDecoderFilterConfig::createFilterFactory(
     const Json::Object &json_config, const std::string &,
     FactoryContext &context) {
-
   Http::Sft::SFTConfigSharedPtr config(new Http::Sft::SFTConfig(
       json_config, context.threadLocal(), context.clusterManager(),
       context.dispatcher(), context.random()));
@@ -31,6 +30,6 @@ static Registry::RegisterFactory<HttpSampleDecoderFilterConfig,
                                  NamedHttpFilterConfigFactory>
     register_;
 
-} // namespace Configuration
-} // namespace Server
-} // namespace Envoy
+}  // namespace Configuration
+}  // namespace Server
+}  // namespace Envoy

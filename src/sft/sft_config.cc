@@ -35,7 +35,6 @@ SFTConfig::SFTConfig(const Json::Object &json_config,
                      std::chrono::milliseconds(json_config.getInteger(
                          "jwks_refresh_delay_ms", 60000))),
       tls_(tls.allocateSlot()) {
-
   if (!cm.get(remote_cluster_name_)) {
     throw EnvoyException(fmt::format(
         "unknown cluster '{}' in sft filter config", remote_cluster_name_));
@@ -98,6 +97,6 @@ void SFTConfig::createRequest(Http::Message &request) {
   request.headers().insertPath().value(jwks_api_path_);
 }
 
-} // namespace Sft
-} // namespace Http
-} // namespace Envoy
+}  // namespace Sft
+}  // namespace Http
+}  // namespace Envoy

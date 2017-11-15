@@ -16,7 +16,7 @@ namespace Sft {
 // Struct to hold a JSON Web Key Set.
 class JWKS : public Logger::Loggable<Logger::Id::http>,
              public ThreadLocal::ThreadLocalObject {
-public:
+ public:
   void add(const Json::ObjectSharedPtr jwk) {
     std::string kid = jwk->getString("kid", "");
     if (kid == "") {
@@ -36,7 +36,7 @@ public:
 
   std::shared_ptr<evp_pkey> get(const std::string &kid) const;
 
-private:
+ private:
   std::map<std::string, std::shared_ptr<evp_pkey>> keys_;
 };
 
@@ -51,14 +51,18 @@ typedef std::shared_ptr<SFTConfig> SFTConfigSharedPtr;
 // a cluster.
 class SFTConfig : public Http::RestApiFetcher,
                   public Logger::Loggable<Logger::Id::http> {
-public:
+ public:
   SFTConfig(const Json::Object &config, ThreadLocal::SlotAllocator &tls,
             Upstream::ClusterManager &cm, Event::Dispatcher &dispatcher,
             Runtime::RandomGenerator &random);
   const JWKS &jwks();
   const LowerCaseString headerKey = LowerCaseString("authenticated-user-jwt");
 
-private:
+  std::string jwks_api_path_;
+  std::string allowed_issuer_;
+  std::vector<std::string> allowed_audiences_;
+
+ private:
   // Http::RestApiFetcher
   void createRequest(Http::Message &request) override;
   void parseResponse(const Http::Message &response) override;
@@ -66,12 +70,8 @@ private:
   void onFetchFailure(const EnvoyException *e) override;
 
   ThreadLocal::SlotPtr tls_;
-
-  std::string jwks_api_path_;
-  std::string allowed_issuer_;
-  std::vector<std::string> allowed_audiences_;
 };
 
-} // namespace Sft
-} // namespace Http
-} // namespace Envoy
+}  // namespace Sft
+}  // namespace Http
+}  // namespace Envoy

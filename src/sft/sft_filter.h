@@ -12,7 +12,7 @@ namespace Http {
 
 class HttpSampleDecoderFilter : public StreamDecoderFilter,
                                 public Logger::Loggable<Logger::Id::http> {
-public:
+ public:
   HttpSampleDecoderFilter(Http::Sft::SFTConfigSharedPtr config);
   ~HttpSampleDecoderFilter();
 
@@ -23,14 +23,14 @@ public:
   FilterHeadersStatus decodeHeaders(HeaderMap &headers, bool) override;
   FilterDataStatus decodeData(Buffer::Instance &, bool) override;
   FilterTrailersStatus decodeTrailers(HeaderMap &) override;
-  void
-  setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &callbacks) override;
+  void setDecoderFilterCallbacks(
+      StreamDecoderFilterCallbacks &callbacks) override;
 
-private:
+ private:
   void sendUnauthorized(std::string status);
   StreamDecoderFilterCallbacks *decoder_callbacks_;
   Http::Sft::SFTConfigSharedPtr config_;
 };
 
-} // namespace Http
-} // namespace Envoy
+}  // namespace Http
+}  // namespace Envoy

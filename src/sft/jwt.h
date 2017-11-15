@@ -107,13 +107,13 @@ struct ecdsa_sig {
 };
 
 // TODO(morgabra) Make this a class.
-const std::shared_ptr<evp_pkey>
-ParseECPublicKey(const Json::ObjectSharedPtr &jwk);
+const std::shared_ptr<evp_pkey> ParseECPublicKey(
+    const Json::ObjectSharedPtr &jwk);
 
 class Jwt;
 
 class Jwt {
-public:
+ public:
   Jwt(const std::string &jwt);
   bool VerifySignature(const std::shared_ptr<evp_pkey> pkey);
 
@@ -123,7 +123,7 @@ public:
   Json::ObjectSharedPtr Header();
   Json::ObjectSharedPtr Payload();
 
-private:
+ private:
   Json::ObjectSharedPtr header_;
   std::string header_raw_;
   Json::ObjectSharedPtr payload_;
@@ -134,6 +134,6 @@ private:
   bool parsed_;
 };
 
-} // namespace Sft
-} // namespace Http
-} // namespace Envoy
+}  // namespace Sft
+}  // namespace Http
+}  // namespace Envoy

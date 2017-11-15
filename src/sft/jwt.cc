@@ -44,14 +44,14 @@ static std::string urlsafeBase64Decode(const std::string &base64) {
 
   for (char &c : input) {
     switch (c) {
-    case '-':
-      c = '+';
-      break;
-    case '_':
-      c = '/';
-      break;
-    default:
-      break;
+      case '-':
+        c = '+';
+        break;
+      case '_':
+        c = '/';
+        break;
+      default:
+        break;
     }
   }
 
@@ -83,9 +83,8 @@ static inline std::string signatureToASN(const std::string &signature) {
 // TODO(morgabra) Make this a class
 // TODO(morgabra) Support RSA?
 // TODO(morgabra) Proper error handling, surface useful errors.
-const std::shared_ptr<evp_pkey>
-ParseECPublicKey(const Json::ObjectSharedPtr &jwk) {
-
+const std::shared_ptr<evp_pkey> ParseECPublicKey(
+    const Json::ObjectSharedPtr &jwk) {
   std::string crv_s = jwk->getString("crv", "");
   int crv = curveTypeToNID(crv_s);
   if (crv == -1) {
@@ -169,7 +168,6 @@ Jwt::Jwt(const std::string &jwt) {
 // TODO(morgabra) Should we do verification of claims here?
 // TODO(morgabra) Proper error handling, surface useful errors.
 bool Jwt::VerifySignature(const std::shared_ptr<evp_pkey> pkey) {
-
   if (!parsed_) {
     return false;
   }
@@ -184,11 +182,6 @@ bool Jwt::VerifySignature(const std::shared_ptr<evp_pkey> pkey) {
   }
 
   evp_md_ctx evp_ctx;
-  if (EVP_DigestInit_ex(evp_ctx, md, nullptr) != 1) {
-    fprintf(stderr, "JWT: EVP_DigestInit_ex failed\n");
-    ERR_print_errors_fp(stderr);
-    return false;
-  }
   if (EVP_DigestVerifyInit(evp_ctx, nullptr, md, nullptr, *pkey) != 1) {
     fprintf(stderr, "JWT: EVP_DigestVerifyInit failed\n");
     ERR_print_errors_fp(stderr);
@@ -215,6 +208,6 @@ Json::ObjectSharedPtr Jwt::Header() { return header_; }
 // Returns the parsed payload.
 Json::ObjectSharedPtr Jwt::Payload() { return payload_; }
 
-} // namespace Sft
-} // namespace Http
-} // namespace Envoy
+}  // namespace Sft
+}  // namespace Http
+}  // namespace Envoy
