@@ -30,25 +30,11 @@ SFTConfig::SFTConfig(const Json::Object &json_config,
                      Upstream::ClusterManager &cm,
                      Event::Dispatcher &dispatcher,
                      Runtime::RandomGenerator &random)
-    : RestApiFetcher(cm, json_config.getString("jwks_api_cluster"), dispatcher,
-                     random,
+    : RestApiFetcher(cm, json_config.getString("jwks_api_cluster", ""),
+                     dispatcher, random,
                      std::chrono::milliseconds(json_config.getInteger(
                          "jwks_refresh_delay_ms", 60000))),
       tls_(tls.allocateSlot()) {
-  if (!cm.get(remote_cluster_name_)) {
-    throw EnvoyException(fmt::format(
-        "unknown cluster '{}' in sft filter config", remote_cluster_name_));
-  }
-
-  // TODO(morgabra) This is copied from a filter in Envoy - What does this do?
-  // Presumably this is globally shared memory, so all threads get to use the
-  // same jwks set. This appears to be the case, but need to read code/verify.
-  JWKSSharedPtr empty(new JWKS());
-  tls_->set(
-      [empty](Event::Dispatcher &) -> ThreadLocal::ThreadLocalObjectSharedPtr {
-        return empty;
-      });
-
   allowed_issuer_ = json_config.getString("iss", "");
   if (allowed_issuer_ == "") {
     throw EnvoyException(fmt::format("invalid 'iss' '{}' in sft filter config",
@@ -57,14 +43,41 @@ SFTConfig::SFTConfig(const Json::Object &json_config,
 
   allowed_audiences_ = json_config.getStringArray("aud", false);
 
-  jwks_api_path_ = json_config.getString("jwks_api_path");
-  if (jwks_api_path_ == "") {
-    throw EnvoyException(
-        fmt::format("empty 'jwks_api_path' in sft jwt auth config"));
+  JWKSSharedPtr empty(new JWKS());
+
+  // Check if we have any static keys, if any fail to parse bail out.
+  std::vector<Json::ObjectSharedPtr> static_keys_ =
+      json_config.getObjectArray("keys", true);
+  if (static_keys_.size() != 0) {
+    ENVOY_LOG(debug, "SFTConfig::{}: Using statically configued jwks",
+              __func__);
+    for (auto &key : static_keys_) {
+      if (!empty->add(key)) {
+        throw EnvoyException(fmt::format("invalid static key in config"));
+      }
+    }
   }
 
-  // Start RestAPIFetcher loop.
-  initialize();
+  tls_->set(
+      [empty](Event::Dispatcher &) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+        return empty;
+      });
+
+  // If we don't have any statically configured keys, ensure we can fetch them.
+  if (static_keys_.size() == 0) {
+    ENVOY_LOG(debug, "SFTConfig::{}: Using jwks from upstream", __func__);
+    if (!cm.get(remote_cluster_name_)) {
+      throw EnvoyException(fmt::format(
+          "unknown cluster '{}' in sft filter config", remote_cluster_name_));
+    }
+    jwks_api_path_ = json_config.getString("jwks_api_path", "");
+    if (jwks_api_path_ == "") {
+      throw EnvoyException(
+          fmt::format("empty 'jwks_api_path' in sft jwt auth config"));
+    }
+    // Start RestApiFetcher.
+    initialize();
+  }
 }
 
 const JWKS &SFTConfig::jwks() { return tls_->getTyped<JWKS>(); }

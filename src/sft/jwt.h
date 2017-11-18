@@ -115,6 +115,7 @@ class Jwt;
 class Jwt {
  public:
   Jwt(const std::string &jwt);
+  bool IsParsed() { return parsed_; };
   bool VerifySignature(const std::shared_ptr<evp_pkey> pkey);
 
   // It returns a pointer to a JSON object of the header of the given JWT.

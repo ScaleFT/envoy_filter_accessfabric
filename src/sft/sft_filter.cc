@@ -18,6 +18,8 @@ SftJwtDecoderFilter::~SftJwtDecoderFilter() {}
 void SftJwtDecoderFilter::onDestroy() {}
 
 void SftJwtDecoderFilter::sendUnauthorized(std::string status) {
+  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__,
+            status);
   Code code = Code(401);
   Utility::sendLocalReply(*decoder_callbacks_, false, code, status);
   return;
@@ -33,6 +35,11 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
   const HeaderString &value = entry->value();
 
   Http::Sft::Jwt jwt = Http::Sft::Jwt(value.c_str());
+
+  if (!jwt.IsParsed()) {
+    sendUnauthorized("jwt malformed");
+    return FilterHeadersStatus::StopIteration;
+  }
 
   // TODO(morgabra) Move claim validation elsewhere
   // Validate issuer (iss)

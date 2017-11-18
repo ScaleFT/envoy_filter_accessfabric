@@ -17,21 +17,22 @@ namespace Sft {
 class JWKS : public Logger::Loggable<Logger::Id::http>,
              public ThreadLocal::ThreadLocalObject {
  public:
-  void add(const Json::ObjectSharedPtr jwk) {
+  bool add(const Json::ObjectSharedPtr jwk) {
     std::string kid = jwk->getString("kid", "");
     if (kid == "") {
       ENVOY_LOG(warn, "jwk missing required key `kid`");
-      return;
+      return false;
     }
 
     auto key = ParseECPublicKey(jwk);
     if (!key) {
       ENVOY_LOG(warn, "jwk parse error");
-      return;
+      return false;
     }
 
     ENVOY_LOG(debug, "parsed jwk {}", kid);
     keys_[kid] = key;
+    return true;
   }
 
   std::shared_ptr<evp_pkey> get(const std::string &kid) const;

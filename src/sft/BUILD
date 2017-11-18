@@ -58,3 +58,17 @@ envoy_cc_binary(
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )
+
+envoy_cc_test(
+    name = "sft_filter_integration_test",
+    srcs = [":integration_test/sft_filter_integration_test.cc"],
+    data = [
+        ":integration_test/envoy.conf",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":sft_filter_config",
+        "@envoy//test/integration:http_integration_lib",
+        "@envoy//test/integration:integration_lib",
+    ],
+)
