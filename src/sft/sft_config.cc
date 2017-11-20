@@ -25,6 +25,24 @@ std::shared_ptr<evp_pkey> JWKS::get(const std::string& kid) const {
   return nullptr;
 }
 
+bool JWKS::add(const Json::ObjectSharedPtr jwk) {
+  std::string kid = jwk->getString("kid", "");
+  if (kid == "") {
+    ENVOY_LOG(warn, "jwk missing required key `kid`");
+    return false;
+  }
+
+  auto key = ParseECPublicKey(jwk);
+  if (!key) {
+    ENVOY_LOG(warn, "jwk parse error");
+    return false;
+  }
+
+  ENVOY_LOG(debug, "parsed jwk {}", kid);
+  keys_[kid] = key;
+  return true;
+}
+
 SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator& tls,
                      Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher,
                      Runtime::RandomGenerator& random)

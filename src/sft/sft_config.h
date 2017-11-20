@@ -16,24 +16,7 @@ namespace Sft {
 // Struct to hold a JSON Web Key Set.
 class JWKS : public Logger::Loggable<Logger::Id::http>, public ThreadLocal::ThreadLocalObject {
 public:
-  bool add(const Json::ObjectSharedPtr jwk) {
-    std::string kid = jwk->getString("kid", "");
-    if (kid == "") {
-      ENVOY_LOG(warn, "jwk missing required key `kid`");
-      return false;
-    }
-
-    auto key = ParseECPublicKey(jwk);
-    if (!key) {
-      ENVOY_LOG(warn, "jwk parse error");
-      return false;
-    }
-
-    ENVOY_LOG(debug, "parsed jwk {}", kid);
-    keys_[kid] = key;
-    return true;
-  }
-
+  bool add(const Json::ObjectSharedPtr jwk);
   std::shared_ptr<evp_pkey> get(const std::string& kid) const;
 
 private:

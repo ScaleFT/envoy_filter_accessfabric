@@ -21,6 +21,32 @@ namespace Envoy {
 namespace Http {
 namespace Sft {
 
+// ECDSA curves, these map to the 'crv' field in the jwk.
+static inline int curveTypeToNID(std::string& type) {
+  if (type == "P-256") {
+    return NID_X9_62_prime256v1;
+  } else if (type == "P-384") {
+    return NID_secp384r1;
+  } else if (type == "P-521") {
+    return NID_secp521r1;
+  } else {
+    return -1;
+  }
+}
+
+// Hash funcs, these map to the 'alg' field in the jwk/jwt header.
+static inline const EVP_MD* hashFuncToEVP(std::string& hash) {
+  if (hash == "ES256") {
+    return EVP_sha256();
+  } else if (hash == "ES384") {
+    return EVP_sha384();
+  } else if (hash == "ES521") {
+    return EVP_sha512();
+  } else {
+    return nullptr;
+  }
+}
+
 // Pad properly, substitute url safe chars for regular Base64, pass to Envoy's
 // Base64 decode.
 static std::string urlsafeBase64Decode(const std::string& base64) {

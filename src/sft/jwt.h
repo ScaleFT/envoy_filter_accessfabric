@@ -32,32 +32,6 @@ static inline const uint8_t* castToUChar(const std::string& str) {
   return reinterpret_cast<const uint8_t*>(str.c_str());
 }
 
-// ECDSA curves, these map to the 'crv' field in the jwk.
-static inline int curveTypeToNID(std::string& type) {
-  if (type == "P-256") {
-    return NID_X9_62_prime256v1;
-  } else if (type == "P-384") {
-    return NID_secp384r1;
-  } else if (type == "P-521") {
-    return NID_secp521r1;
-  } else {
-    return -1;
-  }
-}
-
-// Hash funcs, these map to the 'alg' field in the jwk/jwt header.
-static inline const EVP_MD* hashFuncToEVP(std::string& hash) {
-  if (hash == "ES256") {
-    return EVP_sha256();
-  } else if (hash == "ES384") {
-    return EVP_sha384();
-  } else if (hash == "ES521") {
-    return EVP_sha512();
-  } else {
-    return nullptr;
-  }
-}
-
 // OpenSSL struct wrappers with destructors.
 // TODO(morgabra) Do these work how I think they do? When are destructors called
 // in c++?
