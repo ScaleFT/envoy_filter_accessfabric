@@ -122,8 +122,6 @@ const std::shared_ptr<evp_pkey> ParseECPublicKey(const Json::ObjectSharedPtr& jw
   }
 
   // Wrap in EVP_PKEY
-  // TODO(morgabra) Do shared pointers get destructors called when you
-  // remove them from a collection? (i.e. a map)
   std::shared_ptr<evp_pkey> pkey = std::make_shared<evp_pkey>();
   if (EVP_PKEY_set1_EC_KEY(*pkey, key) != 1) {
     ERR_print_errors_fp(stderr);
@@ -181,7 +179,6 @@ bool Jwt::VerifySignature(const std::shared_ptr<evp_pkey> pkey) {
   }
 
   std::string signed_data = header_raw_ + '.' + payload_raw_;
-  fprintf(stderr, "JWT: verifying signed data %s\n", signed_data.c_str());
 
   std::string alg = header_->getString("alg");
   const EVP_MD* md = hashFuncToEVP(alg);
