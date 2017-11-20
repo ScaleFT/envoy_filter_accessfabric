@@ -10,9 +10,8 @@
 namespace Envoy {
 namespace Http {
 
-class SftJwtDecoderFilter : public StreamDecoderFilter,
-                            public Logger::Loggable<Logger::Id::http> {
- public:
+class SftJwtDecoderFilter : public StreamDecoderFilter, public Logger::Loggable<Logger::Id::http> {
+public:
   SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config);
   ~SftJwtDecoderFilter();
 
@@ -20,17 +19,16 @@ class SftJwtDecoderFilter : public StreamDecoderFilter,
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap &headers, bool) override;
-  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
-  void setDecoderFilterCallbacks(
-      StreamDecoderFilterCallbacks &callbacks) override;
+  FilterHeadersStatus decodeHeaders(HeaderMap& headers, bool) override;
+  FilterDataStatus decodeData(Buffer::Instance&, bool) override;
+  FilterTrailersStatus decodeTrailers(HeaderMap&) override;
+  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) override;
 
- private:
+private:
   void sendUnauthorized(std::string status);
-  StreamDecoderFilterCallbacks *decoder_callbacks_;
+  StreamDecoderFilterCallbacks* decoder_callbacks_;
   Http::Sft::SFTConfigSharedPtr config_;
 };
 
-}  // namespace Http
-}  // namespace Envoy
+} // namespace Http
+} // namespace Envoy

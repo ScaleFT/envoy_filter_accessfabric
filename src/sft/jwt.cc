@@ -23,20 +23,20 @@ namespace Sft {
 
 // Pad properly, substitute url safe chars for regular Base64, pass to Envoy's
 // Base64 decode.
-static std::string urlsafeBase64Decode(const std::string &base64) {
+static std::string urlsafeBase64Decode(const std::string& base64) {
   const size_t padding = (4 - base64.size() % 4) % 4;
   std::string input = base64 + std::string(padding, '=');
 
-  for (char &c : input) {
+  for (char& c : input) {
     switch (c) {
-      case '-':
-        c = '+';
-        break;
-      case '_':
-        c = '/';
-        break;
-      default:
-        break;
+    case '-':
+      c = '+';
+      break;
+    case '_':
+      c = '/';
+      break;
+    default:
+      break;
     }
   }
 
@@ -46,19 +46,17 @@ static std::string urlsafeBase64Decode(const std::string &base64) {
 // Signature block is 2 numbers url safe base64 encoded, the first half is
 // R, the latter half S. We pass that with the relevant public key X and Y
 // initialized with the correct sha/curve functions to do the verification.
-static inline std::string signatureToASN(const std::string &signature) {
+static inline std::string signatureToASN(const std::string& signature) {
   ecdsa_sig sig;
-  BIGNUM *r = sig.r();
-  BIGNUM *s = sig.s();
+  BIGNUM* r = sig.r();
+  BIGNUM* s = sig.s();
 
-  r = BN_bin2bn(castToUChar(signature.substr(0, signature.size() / 2)),
-                signature.size() / 2, r);
-  s = BN_bin2bn(castToUChar(signature.substr(signature.size() / 2)),
-                signature.size() / 2, s);
-  unsigned char *p = nullptr;
+  r = BN_bin2bn(castToUChar(signature.substr(0, signature.size() / 2)), signature.size() / 2, r);
+  s = BN_bin2bn(castToUChar(signature.substr(signature.size() / 2)), signature.size() / 2, s);
+  unsigned char* p = nullptr;
   size_t len;
   len = i2d_ECDSA_SIG(sig, &p);
-  std::string asan = std::string{reinterpret_cast<char const *>(p), len};
+  std::string asan = std::string{reinterpret_cast<char const*>(p), len};
   if (p) {
     OPENSSL_free(p);
   }
@@ -68,8 +66,7 @@ static inline std::string signatureToASN(const std::string &signature) {
 // TODO(morgabra) Make this a class
 // TODO(morgabra) Support RSA?
 // TODO(morgabra) Proper error handling, surface useful errors.
-const std::shared_ptr<evp_pkey> ParseECPublicKey(
-    const Json::ObjectSharedPtr &jwk) {
+const std::shared_ptr<evp_pkey> ParseECPublicKey(const Json::ObjectSharedPtr& jwk) {
   std::string crv_s = jwk->getString("crv", "");
   int crv = curveTypeToNID(crv_s);
   if (crv == -1) {
@@ -113,7 +110,7 @@ const std::shared_ptr<evp_pkey> ParseECPublicKey(
 // TODO(morgabra) Support RSA?
 // TODO(morgabra) Should we do verification of claims here?
 // TODO(morgabra) Proper error handling, surface useful errors.
-Jwt::Jwt(const std::string &jwt) {
+Jwt::Jwt(const std::string& jwt) {
   std::vector<std::string> jwt_split = StringUtil::split(jwt, '.');
   if (jwt_split.size() != 3) {
     parsed_ = false;
@@ -161,7 +158,7 @@ bool Jwt::VerifySignature(const std::shared_ptr<evp_pkey> pkey) {
   fprintf(stderr, "JWT: verifying signed data %s\n", signed_data.c_str());
 
   std::string alg = header_->getString("alg");
-  const EVP_MD *md = hashFuncToEVP(alg);
+  const EVP_MD* md = hashFuncToEVP(alg);
   if (!md) {
     return false;
   }
@@ -172,8 +169,7 @@ bool Jwt::VerifySignature(const std::shared_ptr<evp_pkey> pkey) {
     ERR_print_errors_fp(stderr);
     return false;
   }
-  if (EVP_DigestVerifyUpdate(evp_ctx, castToUChar(signed_data),
-                             signed_data.size()) != 1) {
+  if (EVP_DigestVerifyUpdate(evp_ctx, castToUChar(signed_data), signed_data.size()) != 1) {
     fprintf(stderr, "JWT: EVP_DigestVerifyUpdate failed\n");
     ERR_print_errors_fp(stderr);
     return false;
@@ -193,6 +189,6 @@ Json::ObjectSharedPtr Jwt::Header() { return header_; }
 // Returns the parsed payload.
 Json::ObjectSharedPtr Jwt::Payload() { return payload_; }
 
-}  // namespace Sft
-}  // namespace Http
-}  // namespace Envoy
+} // namespace Sft
+} // namespace Http
+} // namespace Envoy

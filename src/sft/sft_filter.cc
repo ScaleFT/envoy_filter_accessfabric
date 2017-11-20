@@ -9,30 +9,26 @@
 namespace Envoy {
 namespace Http {
 
-SftJwtDecoderFilter::SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config) {
-  config_ = config;
-}
+SftJwtDecoderFilter::SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config) { config_ = config; }
 
 SftJwtDecoderFilter::~SftJwtDecoderFilter() {}
 
 void SftJwtDecoderFilter::onDestroy() {}
 
 void SftJwtDecoderFilter::sendUnauthorized(std::string status) {
-  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__,
-            status);
+  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__, status);
   Code code = Code(401);
   Utility::sendLocalReply(*decoder_callbacks_, false, code, status);
   return;
 }
 
-FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
-                                                       bool) {
-  const HeaderEntry *entry = headers.get(config_->headerKey);
+FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool) {
+  const HeaderEntry* entry = headers.get(config_->headerKey);
   if (!entry) {
     sendUnauthorized("jwt missing header");
     return FilterHeadersStatus::StopIteration;
   }
-  const HeaderString &value = entry->value();
+  const HeaderString& value = entry->value();
 
   Http::Sft::Jwt jwt = Http::Sft::Jwt(value.c_str());
 
@@ -54,8 +50,7 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
   }
 
   // Validate audience (aud) - can be an array or string.
-  std::vector<std::string> audience =
-      jwt.Payload()->getStringArray("aud", true);
+  std::vector<std::string> audience = jwt.Payload()->getStringArray("aud", true);
   if (audience.size() == 0) {
     std::string aud = jwt.Payload()->getString("aud", "");
     if (aud == "") {
@@ -66,9 +61,8 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
   }
 
   bool aud_found = false;
-  for (auto &allowed : config_->allowed_audiences_) {
-    if (std::find(audience.begin(), audience.end(), allowed) !=
-        audience.end()) {
+  for (auto& allowed : config_->allowed_audiences_) {
+    if (std::find(audience.begin(), audience.end(), allowed) != audience.end()) {
       aud_found = true;
     }
     if (aud_found) {
@@ -134,18 +128,17 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap &headers,
   return FilterHeadersStatus::Continue;
 }
 
-FilterDataStatus SftJwtDecoderFilter::decodeData(Buffer::Instance &, bool) {
+FilterDataStatus SftJwtDecoderFilter::decodeData(Buffer::Instance&, bool) {
   return FilterDataStatus::Continue;
 }
 
-FilterTrailersStatus SftJwtDecoderFilter::decodeTrailers(HeaderMap &) {
+FilterTrailersStatus SftJwtDecoderFilter::decodeTrailers(HeaderMap&) {
   return FilterTrailersStatus::Continue;
 }
 
-void SftJwtDecoderFilter::setDecoderFilterCallbacks(
-    StreamDecoderFilterCallbacks &callbacks) {
+void SftJwtDecoderFilter::setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) {
   decoder_callbacks_ = &callbacks;
 }
 
-}  // namespace Http
-}  // namespace Envoy
+} // namespace Http
+} // namespace Envoy

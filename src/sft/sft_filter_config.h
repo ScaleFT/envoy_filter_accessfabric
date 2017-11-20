@@ -9,13 +9,12 @@ namespace Server {
 namespace Configuration {
 
 class SftJwtDecoderFilterConfig : public NamedHttpFilterConfigFactory {
- public:
-  HttpFilterFactoryCb createFilterFactory(const Json::Object &,
-                                          const std::string &stat_prefix,
-                                          FactoryContext &context) override;
+public:
+  HttpFilterFactoryCb createFilterFactory(const Json::Object&, const std::string& stat_prefix,
+                                          FactoryContext& context) override;
   std::string name() override { return "sft"; }
 };
 
-}  // namespace Configuration
-}  // namespace Server
-}  // namespace Envoy
+} // namespace Configuration
+} // namespace Server
+} // namespace Envoy

@@ -28,12 +28,12 @@ namespace Http {
 namespace Sft {
 
 // Hack(?) for passing c-style strings to OpenSSL.
-static inline const uint8_t *castToUChar(const std::string &str) {
-  return reinterpret_cast<const uint8_t *>(str.c_str());
+static inline const uint8_t* castToUChar(const std::string& str) {
+  return reinterpret_cast<const uint8_t*>(str.c_str());
 }
 
 // ECDSA curves, these map to the 'crv' field in the jwk.
-static inline int curveTypeToNID(std::string &type) {
+static inline int curveTypeToNID(std::string& type) {
   if (type == "P-256") {
     return NID_X9_62_prime256v1;
   } else if (type == "P-384") {
@@ -46,7 +46,7 @@ static inline int curveTypeToNID(std::string &type) {
 }
 
 // Hash funcs, these map to the 'alg' field in the jwk/jwt header.
-static inline const EVP_MD *hashFuncToEVP(std::string &hash) {
+static inline const EVP_MD* hashFuncToEVP(std::string& hash) {
   if (hash == "ES256") {
     return EVP_sha256();
   } else if (hash == "ES384") {
@@ -62,59 +62,58 @@ static inline const EVP_MD *hashFuncToEVP(std::string &hash) {
 // TODO(morgabra) Do these work how I think they do? When are destructors called
 // in c++?
 struct bn {
-  BIGNUM *_;
+  BIGNUM* _;
   bn(std::string p) : _(BN_bin2bn(castToUChar(p), p.length(), NULL)) {}
   ~bn() { BN_free(_); }
-  operator BIGNUM *() { return _; }
+  operator BIGNUM*() { return _; }
 };
 
 struct ec {
-  EC_KEY *_;
+  EC_KEY* _;
   ec(int crv) : _(EC_KEY_new_by_curve_name(crv)) {}
   ~ec() { EC_KEY_free(_); }
-  operator EC_KEY *() { return _; }
+  operator EC_KEY*() { return _; }
 };
 
 struct bio {
-  BIO *_;
-  bio(BIO *_) : _(_) {}
+  BIO* _;
+  bio(BIO* _) : _(_) {}
   ~bio() { BIO_free(_); }
-  operator BIO *() { return _; }
+  operator BIO*() { return _; }
 };
 
 struct evp_pkey {
-  EVP_PKEY *_;
+  EVP_PKEY* _;
   evp_pkey() : _(EVP_PKEY_new()) {}
   ~evp_pkey() { EVP_PKEY_free(_); }
-  operator EVP_PKEY *() { return _; }
+  operator EVP_PKEY*() { return _; }
 };
 
 struct evp_md_ctx {
-  EVP_MD_CTX *_;
+  EVP_MD_CTX* _;
   evp_md_ctx() : _(EVP_MD_CTX_create()) {}
   ~evp_md_ctx() { EVP_MD_CTX_destroy(_); }
-  operator EVP_MD_CTX *() { return _; }
+  operator EVP_MD_CTX*() { return _; }
 };
 
 struct ecdsa_sig {
-  ECDSA_SIG *_;
+  ECDSA_SIG* _;
   ecdsa_sig() : _(ECDSA_SIG_new()) {}
   ~ecdsa_sig() { ECDSA_SIG_free(_); }
-  BIGNUM *&r() { return _->r; }
-  BIGNUM *&s() { return _->s; }
-  operator ECDSA_SIG *() { return _; }
-  operator ECDSA_SIG **() { return &_; }
+  BIGNUM*& r() { return _->r; }
+  BIGNUM*& s() { return _->s; }
+  operator ECDSA_SIG*() { return _; }
+  operator ECDSA_SIG**() { return &_; }
 };
 
 // TODO(morgabra) Make this a class.
-const std::shared_ptr<evp_pkey> ParseECPublicKey(
-    const Json::ObjectSharedPtr &jwk);
+const std::shared_ptr<evp_pkey> ParseECPublicKey(const Json::ObjectSharedPtr& jwk);
 
 class Jwt;
 
 class Jwt {
- public:
-  Jwt(const std::string &jwt);
+public:
+  Jwt(const std::string& jwt);
   bool IsParsed() { return parsed_; };
   bool VerifySignature(const std::shared_ptr<evp_pkey> pkey);
 
@@ -124,7 +123,7 @@ class Jwt {
   Json::ObjectSharedPtr Header();
   Json::ObjectSharedPtr Payload();
 
- private:
+private:
   Json::ObjectSharedPtr header_;
   std::string header_raw_;
   Json::ObjectSharedPtr payload_;
@@ -135,6 +134,6 @@ class Jwt {
   bool parsed_;
 };
 
-}  // namespace Sft
-}  // namespace Http
-}  // namespace Envoy
+} // namespace Sft
+} // namespace Http
+} // namespace Envoy

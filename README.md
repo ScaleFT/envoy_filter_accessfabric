@@ -1,4 +1,4 @@
-# sft_envoy_filter
+# envoy_filter_accessfabric
 HTTP envoy filter that verifies JWTs from the ScaleFT access fabric.
 
 Inspiration/hints taken from:
