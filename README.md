@@ -37,6 +37,4 @@ A trivial upstream server (golang) and test config are located in `test-server`.
 
 1. More tests - see `TODO`s in `src/sft/integration_test`
 2. Think about adding a dependency for JWT/JWK parsing/validation - it's currently very limited to just EC keys.
-3. Reorg/Cleanup: JWKS should be a class. Claim validation should be it's responsibility, not in a god method on the filter.
-4. When configured to fetch JWKS, the filter initializes before the cluster is ready, so you have to wait an interval before it can actually fetch the JWKS. We need to figure out how to trigger this or just don't use `RestApiFetcher` and do our own polling.
 5. Check for leaks/general code review.
