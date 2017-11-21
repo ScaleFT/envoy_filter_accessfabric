@@ -237,11 +237,11 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTKeyIDMismatch) {
 
 // Claims: Issuer mismatch.
 TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTIssuerMismatch) {
-  const std::string jwt = "eyJhbGciOiJFUzI1NiIsImtpZCI6Ijg0ZDJmZWQ4LWRlODktNGQyZC05NTI0LTE1NjYzZDgx"
-                          "N2U3YSJ9."
-                          "eyJhdWQiOlsiYXVkMSJdLCJpYXQiOjEuNTEwOTkxMjQzZSswOSwiaXNzIjoiaXNzMiIsImp0"
-                          "aSI6ImlkMSIsInN1YiI6InN1YjEifQ.nft0WffH1gSnw8VSCTC8jODULP-"
-                          "RzuROQIbQnSbaVQ3crANmIQ8ZQPC16dh-GEIbS1CpSk0onRf2bfY633lY_A";
+  const std::string jwt =
+      "eyJhbGciOiJFUzI1NiIsImtpZCI6IjY1Mjg5YjE5LWUwYzYtNDkxOC04OTMzLTc5NjE3ODFhZGIwZCJ9."
+      "eyJhdWQiOlsiYXVkMSJdLCJpYXQiOjEuNTExMjkyODk2ZSswOSwiaXNzIjoiaXNzMiIsImp0aSI6ImlkMSIsInN1YiI6"
+      "InN1YjEifQ.woT8Ym9Y0q-MGrXQqyFmErHvfnbyhNKkUy4UwY9h0sKoVQ2gaz_"
+      "bQnQxjgIrhyci1iiWl2KVbDyi7yNQnoxr5A";
 
   TestVerification(
       createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
@@ -250,12 +250,11 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTIssuerMismatch) {
 
 // Claims: Audience mismatch.
 TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTAudienceMismatch) {
-  const std::string jwt = "eyJhbGciOiJFUzI1NiIsImtpZCI6Ijg0ZDJmZWQ4LWRlODktNGQyZC05NTI0LTE1NjYzZDgx"
-                          "N2U3YSJ9."
-                          "eyJhdWQiOlsiYXVkMyJdLCJpYXQiOjEuNTEwOTkxMjQzZSswOSwiaXNzIjoiaXNzMSIsImp0"
-                          "aSI6ImlkMSIsInN1YiI6InN1YjEifQ."
-                          "YKgTcekuNIEAOO95qYNKe5uMbH0fBoNYhdb8k8ssvBjyx7cfmc7xfMDcC6ppIgjf6sEmsOaO"
-                          "4lFHL1Wma5A3Hw";
+  const std::string jwt = "eyJhbGciOiJFUzI1NiIsImtpZCI6IjY1Mjg5YjE5LWUwYzYtNDkxOC04OTMzLTc5NjE3ODFh"
+                          "ZGIwZCJ9."
+                          "eyJhdWQiOlsiYXVkMyJdLCJpYXQiOjEuNTExMjkyODk2ZSswOSwiaXNzIjoiaXNzMSIsImp0"
+                          "aSI6ImlkMSIsInN1YiI6InN1YjEifQ.UmZeZrmPMlmXHzi1R8X9A1tGvhfPQ2kr6rK1xD5I-"
+                          "vRw8pZfgsd2xBdFE4k1rwTXx_v_b4aF6LXRFOSFHMWYow";
 
   TestVerification(
       createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},

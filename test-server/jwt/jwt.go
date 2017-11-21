@@ -23,14 +23,16 @@ MHcCAQEEIJmg8rwO3n+2QAKmpvJE0ykFbZAS9gjUjviKMvVdvGqqoAoGCCqGSM49
 AwEHoUQDQgAENlKjrC2WShZ1/Vge/NnnlI/AvyS4O8+Fe6FjD4ulZ/93IOZWWT3x
 xedOeCC+KmElgOYRA1px0LNwA6gu5RaoZg==
 -----END EC PRIVATE KEY-----`
+const KEY1ID = "65289b19-e0c6-4918-8933-7961781adb0d"
 
 const KEY2 = `-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEICYOKd/LySjKN7S0sbDiAxtWr7veMiBCZ42hRROCrRLLoAoGCCqGSM49
 AwEHoUQDQgAEEawrkuYeV+Bjzab97rDIah46eCiYSJJ0lZIWd74OfJ+fpDJ5qpDV
 W9fpgqUxZMbFG/H+pnT+a/6fZIWOGhr8OQ==
 -----END EC PRIVATE KEY-----`
+const KEY2ID = "eefdf879-c941-4701-bd5d-f357bff7798d"
 
-func makeJwk(pemBlock string) (jose.Signer, *jose.JSONWebKey, error) {
+func makeJwk(pemBlock, kid string) (jose.Signer, *jose.JSONWebKey, error) {
 
 	var ecdsaPrivateKey *ecdsa.PrivateKey
 
@@ -53,7 +55,6 @@ func makeJwk(pemBlock string) (jose.Signer, *jose.JSONWebKey, error) {
 		ecdsaPrivateKey = key
 	}
 
-	kid := uuid.NewV4().String()
 	opts := &jose.SignerOptions{
 		ExtraHeaders: map[jose.HeaderKey]interface{}{"kid": kid},
 	}
@@ -118,15 +119,15 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 
-		signer1, jwk1, err := makeJwk(KEY1)
+		signer1, jwk1, err := makeJwk(KEY1, KEY1ID)
 		if err != nil {
 			return err
 		}
-		signer2, jwk2, err := makeJwk(KEY2)
+		signer2, jwk2, err := makeJwk(KEY2, KEY2ID)
 		if err != nil {
 			return err
 		}
-		signer3, _, err := makeJwk("")
+		signer3, _, err := makeJwk("", uuid.NewV4().String())
 		if err != nil {
 			return err
 		}

@@ -54,6 +54,22 @@ VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
     return VerifyStatus::JWT_VERIFY_FAIL_MALFORMED;
   }
 
+  // Verify signature
+  const std::string kid = jwt.Header()->getString("kid", "");
+  if (kid == "") {
+    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
+  }
+
+  const Http::Sft::JWKS jwks = config_->jwks();
+  std::shared_ptr<Http::Sft::evp_pkey> pkey = jwks.get(kid);
+  if (!pkey) {
+    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
+  }
+
+  if (!jwt.VerifySignature(pkey)) {
+    return VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE;
+  }
+
   // TODO(morgabra) Move claim validation elsewhere
   // Validate issuer (iss)
   std::string issuer = jwt.Payload()->getString("iss", "");
@@ -113,22 +129,6 @@ VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
     if (now > exp) {
       return VerifyStatus::JWT_VERIFY_FAIL_EXPIRED;
     }
-  }
-
-  // Verify signature
-  const std::string kid = jwt.Header()->getString("kid", "");
-  if (kid == "") {
-    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
-  }
-
-  const Http::Sft::JWKS jwks = config_->jwks();
-  std::shared_ptr<Http::Sft::evp_pkey> pkey = jwks.get(kid);
-  if (!pkey) {
-    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
-  }
-
-  if (!jwt.VerifySignature(pkey)) {
-    return VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE;
   }
 
   config_->stats().jwt_accepted_.inc();
