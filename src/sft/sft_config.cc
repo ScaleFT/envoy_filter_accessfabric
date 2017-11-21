@@ -3,7 +3,10 @@
 #include "common/filesystem/filesystem_impl.h"
 #include "common/json/json_loader.h"
 #include "envoy/json/json_object.h"
+#include "common/http/message_impl.h"
 #include "envoy/upstream/cluster_manager.h"
+#include "common/http/utility.h"
+#include "common/common/enum_to_int.h"
 
 #include <algorithm>
 #include <chrono>
@@ -46,10 +49,14 @@ bool JWKS::add(const Json::ObjectSharedPtr jwk) {
 SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator& tls,
                      Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher,
                      Runtime::RandomGenerator& random)
-    : RestApiFetcher(
-          cm, json_config.getString("jwks_api_cluster", ""), dispatcher, random,
+    : remote_cluster_name_(json_config.getString("jwks_api_cluster", "")), cm_(cm), random_(random),
+      refresh_interval_(
           std::chrono::milliseconds(json_config.getInteger("jwks_refresh_delay_ms", 60000))),
+      refresh_timer_(dispatcher.createTimer([this]() -> void { refresh(); })),
       tls_(tls.allocateSlot()) {
+
+  retry_count_ = int(0);
+
   allowed_issuer_ = json_config.getString("iss", "");
   if (allowed_issuer_ == "") {
     throw EnvoyException(fmt::format("invalid 'iss' '{}' in sft filter config", allowed_issuer_));
@@ -84,35 +91,88 @@ SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator
     if (jwks_api_path_ == "") {
       throw EnvoyException(fmt::format("empty 'jwks_api_path' in sft jwt auth config"));
     }
-    initialize();
+
+    // Start polling.
+    refresh();
+  }
+} // namespace Sft
+
+SFTConfig::~SFTConfig() {
+  if (active_request_) {
+    active_request_->cancel();
   }
 }
 
 const JWKS& SFTConfig::jwks() { return tls_->getTyped<JWKS>(); }
 
-void SFTConfig::parseResponse(const Http::Message& message) {
-  ENVOY_LOG(debug, "SFTConfig::{}: {}", __func__, message.bodyAsString());
+void SFTConfig::refresh() {
+  ENVOY_LOG(debug, "SFTConfig::{}", __func__);
+  MessagePtr message(new RequestMessageImpl());
+  message->headers().insertMethod().value().setReference(Http::Headers::get().MethodValues.Get);
+  message->headers().insertPath().value(jwks_api_path_);
+  message->headers().insertHost().value(remote_cluster_name_);
+  active_request_ = cm_.httpAsyncClientForCluster(remote_cluster_name_)
+                        .send(std::move(message), *this,
+                              Optional<std::chrono::milliseconds>(std::chrono::milliseconds(5000)));
+}
 
-  JWKSSharedPtr new_jwks(new JWKS());
-  Json::ObjectSharedPtr loader = Json::Factory::loadFromString(message.bodyAsString());
-  for (const Json::ObjectSharedPtr& jwk : loader->getObjectArray("keys")) {
-    new_jwks->add(jwk);
+void SFTConfig::requestFailed(Http::AsyncClient::FailureReason) {
+  ENVOY_LOG(debug, "SFTConfig::{} retry count: {}", __func__, retry_count_);
+  if (retry_count_ < 30) {
+    retry_count_++;
+    requestComplete(std::chrono::milliseconds((retry_count_ * retry_count_) * 1000));
+  } else {
+    requestComplete(refresh_interval_); // Poll normally
+  }
+}
+
+void SFTConfig::onFailure(Http::AsyncClient::FailureReason reason) {
+  requestFailed(reason);
+  return;
+}
+
+void SFTConfig::requestComplete(std::chrono::milliseconds interval) {
+  ENVOY_LOG(debug, "SFTConfig::{}", __func__);
+  active_request_ = nullptr;
+
+  // Add refresh jitter based on the configured interval.
+  std::chrono::milliseconds final_delay =
+      interval + std::chrono::milliseconds(random_.random() % interval.count());
+
+  ENVOY_LOG(debug, "SFTConfig::{} setting refresh timer: {} ms", __func__, final_delay.count());
+  refresh_timer_->enableTimer(final_delay);
+}
+
+void SFTConfig::onSuccess(Http::MessagePtr&& response) {
+  uint64_t response_code = Http::Utility::getResponseStatus(response->headers());
+  if (response_code != enumToInt(Http::Code::OK)) {
+    ENVOY_LOG(warn, "SFTConfig::{}: failed request: response {} != 200", __func__, response_code);
+    requestFailed(Http::AsyncClient::FailureReason::Reset);
+    return;
   }
 
-  tls_->set([new_jwks](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
-    return new_jwks;
-  });
-}
+  try {
+    ENVOY_LOG(debug, "SFTConfig::{}: success: {}", __func__, response->bodyAsString());
 
-void SFTConfig::onFetchFailure(const EnvoyException* e) {
-  ENVOY_LOG(warn, "SFTConfig::{}: {}", __func__, e != nullptr ? e->what() : "fetch failure");
-}
+    JWKSSharedPtr new_jwks(new JWKS());
+    Json::ObjectSharedPtr loader = Json::Factory::loadFromString(response->bodyAsString());
+    for (const Json::ObjectSharedPtr& jwk : loader->getObjectArray("keys")) {
+      new_jwks->add(jwk);
+    }
 
-void SFTConfig::createRequest(Http::Message& request) {
-  ENVOY_LOG(debug, "SFTConfig::{}: {}", __func__, jwks_api_path_);
+    tls_->set([new_jwks](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+      return new_jwks;
+    });
 
-  request.headers().insertMethod().value().setReference(Http::Headers::get().MethodValues.Get);
-  request.headers().insertPath().value(jwks_api_path_);
+    retry_count_ = 0;
+    requestComplete(refresh_interval_);
+    return;
+
+  } catch (...) {
+    ENVOY_LOG(warn, "SFTConfig::{}: failed request: parse failure", __func__);
+    requestFailed(Http::AsyncClient::FailureReason::Reset);
+    return;
+  }
 }
 
 } // namespace Sft

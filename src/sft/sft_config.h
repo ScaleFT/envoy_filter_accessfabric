@@ -32,11 +32,12 @@ typedef std::shared_ptr<SFTConfig> SFTConfigSharedPtr;
 // cluster is up, so it fails to fetch the first loop. Might just need to use
 // AsyncClient directly - which is nice anyway because you don't have to specify
 // a cluster.
-class SFTConfig : public Http::RestApiFetcher, public Logger::Loggable<Logger::Id::http> {
+class SFTConfig : public Http::AsyncClient::Callbacks, public Logger::Loggable<Logger::Id::http> {
 public:
   SFTConfig(const Json::Object& config, ThreadLocal::SlotAllocator& tls,
             Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher,
             Runtime::RandomGenerator& random);
+  ~SFTConfig();
   const JWKS& jwks();
   const LowerCaseString headerKey = LowerCaseString("authenticated-user-jwt");
 
@@ -44,12 +45,24 @@ public:
   std::string allowed_issuer_;
   std::vector<std::string> allowed_audiences_;
 
+protected:
+  const std::string remote_cluster_name_;
+  Upstream::ClusterManager& cm_;
+
 private:
-  // Http::RestApiFetcher
-  void createRequest(Http::Message& request) override;
-  void parseResponse(const Http::Message& response) override;
-  void onFetchComplete() override {}
-  void onFetchFailure(const EnvoyException* e) override;
+  // Http::AsyncClient::Callbacks
+  void onSuccess(Http::MessagePtr&& response) override;
+  void onFailure(Http::AsyncClient::FailureReason reason) override;
+
+  void refresh();
+  void requestComplete(std::chrono::milliseconds interval);
+  void requestFailed(Http::AsyncClient::FailureReason reason);
+
+  int retry_count_;
+  Runtime::RandomGenerator& random_;
+  const std::chrono::milliseconds refresh_interval_;
+  Event::TimerPtr refresh_timer_;
+  Http::AsyncClient::Request* active_request_{};
 
   ThreadLocal::SlotPtr tls_;
 };
