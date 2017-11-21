@@ -30,6 +30,7 @@ SftJwtDecoderFilter::SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config) {
 SftJwtDecoderFilter::~SftJwtDecoderFilter() {}
 
 void SftJwtDecoderFilter::sendUnauthorized(VerifyStatus status) {
+  config_->stats().jwt_rejected_.inc();
   std::string statusStr = VerifyStatusToString(status);
   ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__, statusStr);
   Code code = Code(401);
@@ -130,6 +131,7 @@ VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
     return VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE;
   }
 
+  config_->stats().jwt_accepted_.inc();
   return VerifyStatus::JWT_VERIFY_SUCCESS;
 }
 

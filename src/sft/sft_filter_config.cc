@@ -15,7 +15,7 @@ HttpFilterFactoryCb SftJwtDecoderFilterConfig::createFilterFactory(const Json::O
                                                                    FactoryContext& context) {
   Http::Sft::SFTConfigSharedPtr config(
       new Http::Sft::SFTConfig(json_config, context.threadLocal(), context.clusterManager(),
-                               context.dispatcher(), context.random()));
+                               context.dispatcher(), context.scope(), context.random()));
   return [config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{new Http::Sft::SftJwtDecoderFilter(config)});

@@ -4,6 +4,7 @@
 #include "common/http/rest_api_fetcher.h"
 #include "envoy/json/json_object.h"
 #include "server/config/network/http_connection_manager.h"
+#include "envoy/stats/stats_macros.h"
 
 #include "jwt.h"
 
@@ -12,6 +13,18 @@
 namespace Envoy {
 namespace Http {
 namespace Sft {
+
+// clang-format off
+#define ALL_SFT_STATS(COUNTER, GAUGE)                                                       \
+  COUNTER(jwks_fetch_failed)                                                                \
+  COUNTER(jwks_fetch_success)                                                               \
+  COUNTER(jwt_rejected)                                                                     \
+  COUNTER(jwt_accepted)
+// clang-format on
+
+struct SftStats {
+  ALL_SFT_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
+};
 
 // Struct to hold a JSON Web Key Set.
 class JWKS : public Logger::Loggable<Logger::Id::http>, public ThreadLocal::ThreadLocalObject {
@@ -35,11 +48,14 @@ typedef std::shared_ptr<SFTConfig> SFTConfigSharedPtr;
 class SFTConfig : public Http::AsyncClient::Callbacks, public Logger::Loggable<Logger::Id::http> {
 public:
   SFTConfig(const Json::Object& config, ThreadLocal::SlotAllocator& tls,
-            Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher,
+            Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher, Stats::Scope& scope,
             Runtime::RandomGenerator& random);
   ~SFTConfig();
   const JWKS& jwks();
   const LowerCaseString headerKey = LowerCaseString("authenticated-user-jwt");
+
+  const SftStats& stats() { return stats_; }
+  static SftStats generateStats(const std::string& prefix, Stats::Scope& scope);
 
   std::string jwks_api_path_;
   std::string allowed_issuer_;
@@ -64,6 +80,7 @@ private:
   Event::TimerPtr refresh_timer_;
   Http::AsyncClient::Request* active_request_{};
 
+  const SftStats stats_;
   ThreadLocal::SlotPtr tls_;
 };
 

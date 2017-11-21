@@ -48,12 +48,12 @@ bool JWKS::add(const Json::ObjectSharedPtr jwk) {
 
 SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator& tls,
                      Upstream::ClusterManager& cm, Event::Dispatcher& dispatcher,
-                     Runtime::RandomGenerator& random)
+                     Stats::Scope& scope, Runtime::RandomGenerator& random)
     : remote_cluster_name_(json_config.getString("jwks_api_cluster", "")), cm_(cm), random_(random),
       refresh_interval_(
           std::chrono::milliseconds(json_config.getInteger("jwks_refresh_delay_ms", 60000))),
       refresh_timer_(dispatcher.createTimer([this]() -> void { refresh(); })),
-      tls_(tls.allocateSlot()) {
+      stats_(generateStats("scaleft.accessfabric.", scope)), tls_(tls.allocateSlot()) {
 
   retry_count_ = int(0);
 
@@ -103,6 +103,10 @@ SFTConfig::~SFTConfig() {
   }
 }
 
+SftStats SFTConfig::generateStats(const std::string& prefix, Stats::Scope& scope) {
+  return {ALL_SFT_STATS(POOL_COUNTER_PREFIX(scope, prefix), POOL_GAUGE_PREFIX(scope, prefix))};
+}
+
 const JWKS& SFTConfig::jwks() { return tls_->getTyped<JWKS>(); }
 
 void SFTConfig::refresh() {
@@ -118,6 +122,8 @@ void SFTConfig::refresh() {
 
 void SFTConfig::requestFailed(Http::AsyncClient::FailureReason) {
   ENVOY_LOG(debug, "SFTConfig::{} retry count: {}", __func__, retry_count_);
+  stats().jwks_fetch_failed_.inc();
+
   if (retry_count_ < 30) {
     retry_count_++;
     requestComplete(std::chrono::milliseconds((retry_count_ * retry_count_) * 1000));
@@ -165,6 +171,7 @@ void SFTConfig::onSuccess(Http::MessagePtr&& response) {
     });
 
     retry_count_ = 0;
+    stats().jwks_fetch_success_.inc();
     requestComplete(refresh_interval_);
     return;
 
