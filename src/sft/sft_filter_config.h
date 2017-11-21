@@ -12,7 +12,7 @@ class SftJwtDecoderFilterConfig : public NamedHttpFilterConfigFactory {
 public:
   HttpFilterFactoryCb createFilterFactory(const Json::Object&, const std::string& stat_prefix,
                                           FactoryContext& context) override;
-  std::string name() override { return "sft"; }
+  std::string name() override { return "scaleft.accessfabric"; }
 };
 
 } // namespace Configuration
