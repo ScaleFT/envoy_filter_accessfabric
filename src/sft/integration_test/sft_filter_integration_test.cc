@@ -1,5 +1,6 @@
 #include "test/integration/http_integration.h"
 #include "test/integration/utility.h"
+#include "../sft_filter.h"
 
 namespace Envoy {
 
@@ -148,8 +149,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, ValidJWT2) {
 
 // Omit jwt header from request entirely.
 TEST_P(SFTVerificationFilterIntegrationTest, MissingJWT) {
-  TestVerification(BaseRequestHeaders(), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt missing header");
+  TestVerification(
+      BaseRequestHeaders(), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT));
 }
 
 // Change 1 bit in the signature.
@@ -161,8 +163,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTInvalidSignature) {
                           "reCkGI3OnbfXc7HbUpz98knlBmwu39CNHx90r3qUbe3KwpLl54P9UiF2PkfOfhUo0NlA6gYl"
                           "Q";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt signature verification failed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE));
 }
 
 // Remove entire header block.
@@ -172,8 +175,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTMalformedMissingHeader) {
                           "reCkGI3OnbfXc7HbUpz98knlBmwu39CNHx90r4qUbe3KwpLl54P9UiF2PkfOfhUo0NlA6gYl"
                           "Q";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt malformed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_MALFORMED));
 }
 
 // Remove some random bytes from the header block.
@@ -185,8 +189,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTMalformedHeader) {
                           "reCkGI3OnbfXc7HbUpz98knlBmwu39CNHx90r4qUbe3KwpLl54P9UiF2PkfOfhUo0NlA6gYl"
                           "Q";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt malformed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_MALFORMED));
 }
 
 // Remove some random bytes from the payload block.
@@ -198,8 +203,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTMalformedPayload) {
                           "reCkGI3OnbfXc7HbUpz98knlBmwu39CNHx90r4qUbe3KwpLl54P9UiF2PkfOfhUo0NlA6gYl"
                           "Q";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt malformed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_MALFORMED));
 }
 
 // Remove some random bytes from the signature block.
@@ -211,8 +217,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTMalformedSignature) {
                           "reCkGI3OnbfXc7HbUpz98knlBmwu39CNHx90r4qUbe3KwpLl54P9UiF2PkfOfhUo0NlA6gY"
                           "l";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt malformed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_MALFORMED));
 }
 
 // A otherwise valid jwt signed with key we don't know about.
@@ -223,8 +230,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTKeyIDMismatch) {
                           "aSI6ImlkMSIsInN1YiI6InN1YjEifQ.KPlrw5HFx-MpFKi_I_"
                           "nABxnoCnjvnpQcHe1Dgo1jWLLwOCzseAHXK8CgaoqABGjQ715J0A1KLimC-MF6L6uf5g";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt no public key found for given key id");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS));
 }
 
 // Claims: Issuer mismatch.
@@ -235,8 +243,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTIssuerMismatch) {
                           "aSI6ImlkMSIsInN1YiI6InN1YjEifQ.nft0WffH1gSnw8VSCTC8jODULP-"
                           "RzuROQIbQnSbaVQ3crANmIQ8ZQPC16dh-GEIbS1CpSk0onRf2bfY633lY_A";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt issuer ('iss') is not allowed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_ISSUER_MISMATCH));
 }
 
 // Claims: Audience mismatch.
@@ -248,8 +257,9 @@ TEST_P(SFTVerificationFilterIntegrationTest, InvalidJWTAudienceMismatch) {
                           "YKgTcekuNIEAOO95qYNKe5uMbH0fBoNYhdb8k8ssvBjyx7cfmc7xfMDcC6ppIgjf6sEmsOaO"
                           "4lFHL1Wma5A3Hw";
 
-  TestVerification(createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
-                   "jwt audience ('aud') is not allowed");
+  TestVerification(
+      createHeaders(jwt), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_AUDIENCE_MISMATCH));
 }
 
 // TODO(morgabra) exp and nbf tests - need to figure out how to mock time.

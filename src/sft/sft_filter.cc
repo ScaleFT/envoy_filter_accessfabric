@@ -8,45 +8,59 @@
 
 namespace Envoy {
 namespace Http {
+namespace Sft {
+
+std::string VerifyStatusToString(VerifyStatus status) {
+  static std::map<VerifyStatus, std::string> table = {
+      {VerifyStatus::JWT_VERIFY_SUCCESS, "JWT_VERIFY_SUCCESS"},
+      {VerifyStatus::JWT_VERIFY_FAIL_UNKNOWN, "JWT_VERIFY_FAIL_UNKNOWN"},
+      {VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT, "JWT_VERIFY_FAIL_NOT_PRESENT"},
+      {VerifyStatus::JWT_VERIFY_FAIL_EXPIRED, "JWT_VERIFY_FAIL_EXPIRED"},
+      {VerifyStatus::JWT_VERIFY_FAIL_NOT_BEFORE, "JWT_VERIFY_FAIL_NOT_BEFORE"},
+      {VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE, "JWT_VERIFY_FAIL_INVALID_SIGNATURE"},
+      {VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS, "JWT_VERIFY_FAIL_NO_VALIDATORS"},
+      {VerifyStatus::JWT_VERIFY_FAIL_MALFORMED, "JWT_VERIFY_FAIL_MALFORMED"},
+      {VerifyStatus::JWT_VERIFY_FAIL_ISSUER_MISMATCH, "JWT_VERIFY_FAIL_ISSUER_MISMATCH"},
+      {VerifyStatus::JWT_VERIFY_FAIL_AUDIENCE_MISMATCH, "JWT_VERIFY_FAIL_AUDIENCE_MISMATCH"}};
+  return table[status];
+}
 
 SftJwtDecoderFilter::SftJwtDecoderFilter(Http::Sft::SFTConfigSharedPtr config) { config_ = config; }
 
 SftJwtDecoderFilter::~SftJwtDecoderFilter() {}
 
-void SftJwtDecoderFilter::onDestroy() {}
-
-void SftJwtDecoderFilter::sendUnauthorized(std::string status) {
-  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__, status);
+void SftJwtDecoderFilter::sendUnauthorized(VerifyStatus status) {
+  std::string statusStr = VerifyStatusToString(status);
+  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Unauthorized : {}", __func__, statusStr);
   Code code = Code(401);
-  Utility::sendLocalReply(*decoder_callbacks_, false, code, status);
+  Utility::sendLocalReply(*decoder_callbacks_, false, code, statusStr);
   return;
 }
 
-FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool) {
+VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
+  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}", __func__);
+
+  // Check if header key/jwt exists.
   const HeaderEntry* entry = headers.get(config_->headerKey);
   if (!entry) {
-    sendUnauthorized("jwt missing header");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT;
   }
-  const HeaderString& value = entry->value();
 
-  Http::Sft::Jwt jwt = Http::Sft::Jwt(value.c_str());
+  // Check if jwt can be parsed.
+  Http::Sft::Jwt jwt = Http::Sft::Jwt(entry->value().c_str());
 
   if (!jwt.IsParsed()) {
-    sendUnauthorized("jwt malformed");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_MALFORMED;
   }
 
   // TODO(morgabra) Move claim validation elsewhere
   // Validate issuer (iss)
   std::string issuer = jwt.Payload()->getString("iss", "");
   if (issuer == "") {
-    sendUnauthorized("jwt missing issuer ('iss')");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_ISSUER_MISMATCH;
   }
   if (config_->allowed_issuer_ != issuer) {
-    sendUnauthorized("jwt issuer ('iss') is not allowed");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_ISSUER_MISMATCH;
   }
 
   // Validate audience (aud) - can be an array or string.
@@ -54,8 +68,7 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool)
   if (audience.size() == 0) {
     std::string aud = jwt.Payload()->getString("aud", "");
     if (aud == "") {
-      sendUnauthorized("jwt missing audience ('aud')");
-      return FilterHeadersStatus::StopIteration;
+      return VerifyStatus::JWT_VERIFY_FAIL_AUDIENCE_MISMATCH;
     }
     audience.push_back(aud);
   }
@@ -71,60 +84,61 @@ FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool)
   }
 
   if (!aud_found) {
-    sendUnauthorized("jwt audience ('aud') is not allowed");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_AUDIENCE_MISMATCH;
   }
 
   // Verify expiration/not-before (exp/nbf)
   auto now = std::chrono::duration_cast<std::chrono::seconds>(
-                 std::chrono::system_clock::now().time_since_epoch())
+                 ProdSystemTimeSource::instance_.currentTime().time_since_epoch())
                  .count();
 
   if (jwt.Payload()->hasObject("nbf")) {
     int64_t nbf = jwt.Payload()->getInteger("nbf", -1);
     if (nbf < 0) {
-      sendUnauthorized("jwt not-before ('nbf') missing or invalid");
-      return FilterHeadersStatus::StopIteration;
+      return VerifyStatus::JWT_VERIFY_FAIL_NOT_BEFORE;
     }
 
     if (now < nbf) {
-      sendUnauthorized("jwt not-before ('nbf') validation failed");
-      return FilterHeadersStatus::StopIteration;
+      return VerifyStatus::JWT_VERIFY_FAIL_NOT_BEFORE;
     }
   }
 
   if (jwt.Payload()->hasObject("exp")) {
     int64_t exp = jwt.Payload()->getInteger("exp", -1);
     if (exp < 0) {
-      sendUnauthorized("jwt expiration ('exp') missing or invalid");
-      return FilterHeadersStatus::StopIteration;
+      return VerifyStatus::JWT_VERIFY_FAIL_EXPIRED;
     }
 
     if (now > exp) {
-      sendUnauthorized("jwt expiration ('exp') validation failed");
-      return FilterHeadersStatus::StopIteration;
+      return VerifyStatus::JWT_VERIFY_FAIL_EXPIRED;
     }
   }
 
   // Verify signature
   const std::string kid = jwt.Header()->getString("kid", "");
   if (kid == "") {
-    sendUnauthorized("jwt header missing key id ('kid')");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
   }
 
   const Http::Sft::JWKS jwks = config_->jwks();
   std::shared_ptr<Http::Sft::evp_pkey> pkey = jwks.get(kid);
   if (!pkey) {
-    sendUnauthorized("jwt no public key found for given key id");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_NO_VALIDATORS;
   }
 
   if (!jwt.VerifySignature(pkey)) {
-    sendUnauthorized("jwt signature verification failed");
-    return FilterHeadersStatus::StopIteration;
+    return VerifyStatus::JWT_VERIFY_FAIL_INVALID_SIGNATURE;
   }
 
+  return VerifyStatus::JWT_VERIFY_SUCCESS;
+}
+
+FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool) {
+  VerifyStatus status = verify(headers);
+  if (status != VerifyStatus::JWT_VERIFY_SUCCESS) {
+    sendUnauthorized(status);
+    return FilterHeadersStatus::StopIteration;
+  }
   return FilterHeadersStatus::Continue;
 }
 
@@ -140,5 +154,8 @@ void SftJwtDecoderFilter::setDecoderFilterCallbacks(StreamDecoderFilterCallbacks
   decoder_callbacks_ = &callbacks;
 }
 
+void SftJwtDecoderFilter::onDestroy() {}
+
+} // namespace Sft
 } // namespace Http
 } // namespace Envoy

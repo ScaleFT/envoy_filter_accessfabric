@@ -84,7 +84,6 @@ SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator
     if (jwks_api_path_ == "") {
       throw EnvoyException(fmt::format("empty 'jwks_api_path' in sft jwt auth config"));
     }
-    // Start RestApiFetcher.
     initialize();
   }
 }
