@@ -32,9 +32,3 @@ A trivial upstream server (golang) and test config are located in `test-server`.
 3. Modify `test-server/envoy.conf` appropriately
 3. `bazel-bin/src/sft/envoy -c test-server/envoy.conf -l debug`
 4. `curl -v http://localhost:8080 -H "Authenticated-User-Jwt: $JWT"`
-
-## TODO
-
-1. More tests - see `TODO`s in `src/sft/integration_test`
-2. Think about adding a dependency for JWT/JWK parsing/validation - it's currently very limited to just EC keys.
-5. Check for leaks/general code review.
