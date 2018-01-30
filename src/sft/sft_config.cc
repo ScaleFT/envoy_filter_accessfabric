@@ -63,6 +63,7 @@ SFTConfig::SFTConfig(const Json::Object& json_config, ThreadLocal::SlotAllocator
   }
 
   allowed_audiences_ = json_config.getStringArray("aud", false);
+  whitelisted_paths_ = json_config.getStringArray("whitelisted_paths", true);
 
   JWKSSharedPtr empty(new JWKS());
 
@@ -108,6 +109,24 @@ SftStats SFTConfig::generateStats(const std::string& prefix, Stats::Scope& scope
 }
 
 const JWKS& SFTConfig::jwks() { return tls_->getTyped<JWKS>(); }
+
+bool SFTConfig::whitelistMatch(const Http::HeaderMap& headers) {
+  const Http::HeaderString& path = headers.Path()->value();
+  const char* query_string_start = Http::Utility::findQueryStringStart(path);
+  size_t compare_length = path.size();
+  if (query_string_start != nullptr) {
+    compare_length = query_string_start - path.c_str();
+  }
+  for (auto& wl_path : whitelisted_paths_) {
+    if (compare_length != wl_path.size()) {
+      return false;
+    }
+    if (0 == strncasecmp(path.c_str(), wl_path.c_str(), compare_length)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 void SFTConfig::refresh() {
   ENVOY_LOG(debug, "SFTConfig::{}", __func__);

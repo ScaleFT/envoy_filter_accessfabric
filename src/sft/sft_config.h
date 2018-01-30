@@ -19,7 +19,8 @@ namespace Sft {
   COUNTER(jwks_fetch_failed)                                                                \
   COUNTER(jwks_fetch_success)                                                               \
   COUNTER(jwt_rejected)                                                                     \
-  COUNTER(jwt_accepted)
+  COUNTER(jwt_accepted)                                                                     \
+  COUNTER(whitelist_accepted)
 // clang-format on
 
 struct SftStats {
@@ -57,9 +58,12 @@ public:
   const SftStats& stats() { return stats_; }
   static SftStats generateStats(const std::string& prefix, Stats::Scope& scope);
 
+  bool whitelistMatch(const Http::HeaderMap& headers);
+
   std::string jwks_api_path_;
   std::string allowed_issuer_;
   std::vector<std::string> allowed_audiences_;
+  std::vector<std::string> whitelisted_paths_;
 
 protected:
   const std::string remote_cluster_name_;

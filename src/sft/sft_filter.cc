@@ -4,6 +4,7 @@
 
 #include "common/common/logger.h"
 #include "common/http/utility.h"
+#include "common/http/headers.h"
 #include "server/config/network/http_connection_manager.h"
 
 namespace Envoy {
@@ -12,6 +13,7 @@ namespace Sft {
 
 std::string VerifyStatusToString(VerifyStatus status) {
   static std::map<VerifyStatus, std::string> table = {
+      {VerifyStatus::WHITELISTED_PATH, "WHITELISTED_PATH"},
       {VerifyStatus::JWT_VERIFY_SUCCESS, "JWT_VERIFY_SUCCESS"},
       {VerifyStatus::JWT_VERIFY_FAIL_UNKNOWN, "JWT_VERIFY_FAIL_UNKNOWN"},
       {VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT, "JWT_VERIFY_FAIL_NOT_PRESENT"},
@@ -40,6 +42,12 @@ void SftJwtDecoderFilter::sendUnauthorized(VerifyStatus status) {
 
 VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
   ENVOY_LOG(debug, "SftJwtDecoderFilter::{}", __func__);
+
+  // Check if the request path is on the whitelist
+  if (config_->whitelistMatch(headers)) {
+    config_->stats().whitelist_accepted_.inc();
+    return VerifyStatus::WHITELISTED_PATH;
+  }
 
   // Check if header key/jwt exists.
   const HeaderEntry* entry = headers.get(config_->headerKey);
@@ -137,10 +145,12 @@ VerifyStatus SftJwtDecoderFilter::verify(HeaderMap& headers) {
 
 FilterHeadersStatus SftJwtDecoderFilter::decodeHeaders(HeaderMap& headers, bool) {
   VerifyStatus status = verify(headers);
-  if (status != VerifyStatus::JWT_VERIFY_SUCCESS) {
+  if (status != VerifyStatus::JWT_VERIFY_SUCCESS && status != VerifyStatus::WHITELISTED_PATH) {
     sendUnauthorized(status);
     return FilterHeadersStatus::StopIteration;
   }
+  std::string statusStr = VerifyStatusToString(status);
+  ENVOY_LOG(debug, "SftJwtDecoderFilter::{}: Authorized ({})", __func__, statusStr);
   return FilterHeadersStatus::Continue;
 }
 

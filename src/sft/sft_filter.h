@@ -12,6 +12,7 @@ namespace Http {
 namespace Sft {
 
 enum class VerifyStatus {
+  WHITELISTED_PATH,
   JWT_VERIFY_SUCCESS,
   JWT_VERIFY_FAIL_UNKNOWN,
   JWT_VERIFY_FAIL_NOT_PRESENT,
