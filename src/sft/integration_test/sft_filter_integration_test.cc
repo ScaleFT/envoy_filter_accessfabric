@@ -122,22 +122,36 @@ class SFTVerificationFilterIntegrationTest : public SFTFilterIntegrationTestBase
 INSTANTIATE_TEST_CASE_P(IpVersions, SFTVerificationFilterIntegrationTest,
                         testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
-// Whitelist.
+// Whitelisted path.
 TEST_P(SFTVerificationFilterIntegrationTest, ValidWhitelist) {
   auto expected_headers = BaseRequestHeaders("/v1/auth/callback");
   TestVerification(expected_headers, "", true, expected_headers, "");
 }
 
-// Whitelist.
-TEST_P(SFTVerificationFilterIntegrationTest, ValidWhitelist2) {
-  auto expected_headers = BaseRequestHeaders("/v2/auth/callback");
+// Whitelisted path with query params.
+TEST_P(SFTVerificationFilterIntegrationTest, ValidWhitelistQueryParams) {
+  auto expected_headers = BaseRequestHeaders("/v2/auth/callback?foo=bar&fizz=buzz");
   TestVerification(expected_headers, "", true, expected_headers, "");
 }
 
-// Invalid Whitelist.
+// Non-Whitelisted path.
 TEST_P(SFTVerificationFilterIntegrationTest, InvalidWhitelist2) {
   TestVerification(
-      BaseRequestHeaders("/v3/auth/callback"), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      BaseRequestHeaders("/"), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT));
+}
+
+// Non-Whitelisted path.
+TEST_P(SFTVerificationFilterIntegrationTest, InvalidWhitelist3) {
+  TestVerification(
+      BaseRequestHeaders("/not/whitelisted"), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT));
+}
+
+// Non-Whitelisted path, prefixed with a whitelisted path.
+TEST_P(SFTVerificationFilterIntegrationTest, InvalidWhitelist4) {
+  TestVerification(
+      BaseRequestHeaders("/v1/auth/callback/extra"), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
       Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT));
 }
 
