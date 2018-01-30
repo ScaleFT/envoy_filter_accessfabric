@@ -27,6 +27,10 @@ protected:
     return Http::TestHeaderMapImpl{{":method", "GET"}, {":path", "/"}, {":authority", "host"}};
   }
 
+  Http::TestHeaderMapImpl BaseRequestHeaders(const std::string& path) {
+    return Http::TestHeaderMapImpl{{":method", "GET"}, {":path", path}, {":authority", "host"}};
+  }
+
   Http::TestHeaderMapImpl createHeaders(const std::string& token) {
     auto headers = BaseRequestHeaders();
     headers.addCopy("Authenticated-User-Jwt", token);
@@ -117,6 +121,25 @@ class SFTVerificationFilterIntegrationTest : public SFTFilterIntegrationTestBase
 
 INSTANTIATE_TEST_CASE_P(IpVersions, SFTVerificationFilterIntegrationTest,
                         testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
+
+// Whitelist.
+TEST_P(SFTVerificationFilterIntegrationTest, ValidWhitelist) {
+  auto expected_headers = BaseRequestHeaders("/v1/auth/callback");
+  TestVerification(expected_headers, "", true, expected_headers, "");
+}
+
+// Whitelist.
+TEST_P(SFTVerificationFilterIntegrationTest, ValidWhitelist2) {
+  auto expected_headers = BaseRequestHeaders("/v2/auth/callback");
+  TestVerification(expected_headers, "", true, expected_headers, "");
+}
+
+// Invalid Whitelist.
+TEST_P(SFTVerificationFilterIntegrationTest, InvalidWhitelist2) {
+  TestVerification(
+      BaseRequestHeaders("/v3/auth/callback"), "", false, Http::TestHeaderMapImpl{{":status", "401"}},
+      Http::Sft::VerifyStatusToString(Http::Sft::VerifyStatus::JWT_VERIFY_FAIL_NOT_PRESENT));
+}
 
 // Valid jwt signed with a known key.
 TEST_P(SFTVerificationFilterIntegrationTest, ValidJWT) {
