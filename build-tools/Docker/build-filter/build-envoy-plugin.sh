@@ -7,7 +7,6 @@
 org=${1:-"ScaleFT"}
 branch=${2:-"master"}
 
-#TODO add build-arg support into this script. This will default to the master branch
 docker build --build-arg org=$org --build-arg branch=$branch  -t envoybuild .
 
 docker run --name=evb -di envoybuild bash
