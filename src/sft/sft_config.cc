@@ -25,6 +25,8 @@ std::shared_ptr<evp_pkey> JWKS::get(const std::string& kid) const {
   if (it != keys_.end()) {
     return it->second;
   }
+
+  ENVOY_LOG(debug, "unable to find jwk with kid {}", kid);
   return nullptr;
 }
 
