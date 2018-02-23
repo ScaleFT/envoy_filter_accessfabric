@@ -27,5 +27,4 @@ WORKDIR /access-fabric/envoy_filter_accessfabric/
 RUN git submodule update --init
 RUN bazel build //src/sft:envoy
 
-# looks like this test has an ipv6 dependency, docker only supports linux hosts for ipv6 at the moment
-# RUN bazel test --test_output=streamed //src/sft/... --test_arg="-l debug"
+RUN bazel test --test_output=streamed //src/sft/... --test_arg="-l debug" --test_env=ENVOY_IP_TEST_VERSIONS=v4only
